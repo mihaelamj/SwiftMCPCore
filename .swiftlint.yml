@@ -1,0 +1,44 @@
+# Mechanical enforcement of the code rules a machine can decide. Tuned to match
+# cupertino's canonical SwiftLint config (the kit holds itself to the same
+# rule-set so the post-v1.3.0 merge into a shared core stays mechanical):
+# line_length 180 (matches .swiftformat --maxwidth), nesting type_level 3 (the
+# `MCP.Core.Protocols.Type.Params` namespace-extension shape), trailing commas
+# mandatory, and no force-unwrap/try/cast in shipping code.
+
+excluded:
+  - ".build" # build artifacts and resolved dependencies
+  - "Tests" # tests legitimately use force-unwrapping and IUO setup
+
+opt_in_rules:
+  - force_unwrapping
+
+force_unwrapping: error
+force_try: error
+force_cast: error
+
+trailing_comma:
+  mandatory_comma: true
+
+line_length:
+  warning: 180
+  error: 180
+  ignores_comments: true
+  ignores_urls: true
+
+# The wire types nest one struct's `Params` inside its request struct, hosted by
+# the `MCP.Core.Protocols` namespace extension: three levels deep, idiomatic here.
+nesting:
+  type_level:
+    warning: 3
+    error: 3
+  function_level:
+    warning: 5
+    error: 5
+
+custom_rules:
+  use_data_constructor_over_string_member:
+    included: ".*\\.swift"
+    name: "Do not use String.data(using: .utf8)"
+    regex: "\\.?data\\(using: \\.utf8\\)"
+    message: "Use Data(string.utf8) instead of String.data(using: .utf8); the Data constructor is non-optional."
+    severity: error

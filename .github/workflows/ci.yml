@@ -1,0 +1,56 @@
+name: CI
+
+# The mechanical gates, run on GitHub as the backstop to the local git hooks.
+# This is a standalone SPM library: Package.swift lives at the repo root, so the
+# Swift gates build and test from the root (no Packages/ subdir). The Linux job
+# builds only the cross-platform targets; the macOS-only subprocess targets are
+# excluded by `#if os(macOS)` in the manifest.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  style:
+    name: Style and namespacing
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Style gate (no em dashes, no tool attribution)
+        run: bash scripts/check-style.sh
+      - name: Namespacing gate (one type per file)
+        run: bash scripts/check-namespacing.sh
+
+  swift-macos:
+    name: Swift (macOS)
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      # The package is swift-tools 6.2; select the latest stable Xcode so the
+      # runner's Swift matches (the default Xcode can lag a release).
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - name: Format, lint, build, test
+        run: |
+          brew install swiftformat swiftlint
+          swiftformat . --config .swiftformat --lint
+          swiftlint --config .swiftlint.yml --strict
+          swift build
+          swift test
+
+  swift-linux:
+    name: Swift (Linux)
+    runs-on: ubuntu-latest
+    container: swift:6.2
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and test (cross-platform targets only)
+        run: |
+          swift build
+          swift test
